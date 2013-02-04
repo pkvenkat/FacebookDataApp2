@@ -56,7 +56,6 @@ public class facebookAlgo implements Algorithm {
     public Data[] execute() throws AlgorithmExecutionException {
     	this.logger.log(LogService.LOG_INFO, "Opening Facebook login page");
 				
-		
         String token = facade.getAccessToken();
 		this.logger.log(LogService.LOG_INFO, "Access Token: "+ token);
 		String data = "access_token="+token;
@@ -69,7 +68,7 @@ public class facebookAlgo implements Algorithm {
 		}
 		JSONObject obj;
 		try {
-		    FaceBookAPI fb = new FriendsInAppAPI();
+		    FaceBookAPI fb = new FriendsInAppAPI(logger);
 			obj = new JSONObject(fb.callAPI(data, ""));	
         
 			JSONArray jsonArray = obj.getJSONArray("data");
@@ -77,15 +76,15 @@ public class facebookAlgo implements Algorithm {
 			for (int i = 0; i < len; i++) {
 			                    JSONObject currentResult = jsonArray.getJSONObject(i);
 			                    String friendOnename = currentResult.getString("name");
-			                    String id = currentResult.getString("id");
+			                    Long id = currentResult.getLong("uid");
 			                    FriendsPair fp = new FriendsPair(myName, friendOnename);
 			                    pairList.add(fp);
 			                    
-			                    //this.logger.log(LogService.LOG_INFO, "Name = "+friendOnename);
-			                    //this.logger.log(LogService.LOG_INFO, "id = "+id);
+			                    this.logger.log(LogService.LOG_INFO, "Name = "+friendOnename);
+			                    this.logger.log(LogService.LOG_INFO, "id = "+id);
 			                  //code for friends of friends   
 			                    FaceBookAPI ff = new FriendsWithFriendsAPI();
-			                    String string =ff.callAPI(data, id);
+			                    String string =ff.callAPI(data, id.toString());
 			                    if(string.equals("No data") || string.isEmpty()) continue;
 			                    JSONObject ffobj = new JSONObject(string);			                
 			        			JSONArray friensArray = ffobj.getJSONArray("data");
@@ -98,7 +97,20 @@ public class facebookAlgo implements Algorithm {
 				                    this.logger.log(LogService.LOG_INFO, "friends friendName = "+friendTwoName);
 				                    
 				                    pairList.add(new FriendsPair(friendOnename,friendTwoName));
-			        			}			                    	                 
+			        			}
+			}       			
+			//to get my friends
+            FaceBookAPI myFriends = new MyFriendsAPI();
+			obj = new JSONObject(myFriends.callAPI(data, ""));			                
+			JSONArray friendsArray = obj.getJSONArray("data");
+			len = friendsArray.length();
+			for (int j = 0; j < len; j++) {
+				JSONObject innerResult = friendsArray.getJSONObject(j);
+                String friendTwoName = innerResult.getString("name");
+                //this.logger.log(LogService.LOG_INFO, "friends friendName = "+friendOnename);
+                this.logger.log(LogService.LOG_INFO, "friends friendName = "+friendTwoName);
+                
+                pairList.add(new FriendsPair(myName,friendTwoName));			
 			 }				
 		} catch (JSONException e) {
 			logger.log(LogService.LOG_INFO, e.getMessage());
